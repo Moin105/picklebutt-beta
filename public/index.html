@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pickle Arcade - Start</title>
+
+    <style>
+      body {
+        text-align: center;
+        background-color: palegreen;
+      }
+
+      #title {
+        background-color: transparent;
+        border: none;
+      }
+
+      #enterName {
+        width: 50%;
+        background-color: aliceblue;
+        color: black;
+      }
+
+      input {
+        width: 100px;
+      }
+
+      #jump {
+        background-color: transparent;
+        border: none;
+      }
+
+      #zoom {
+        background-color: transparent;
+        border: none;
+      }
+
+      #land {
+        background-color: transparent;
+        border: none;
+      }
+
+      .box {
+        width: 100px;
+        /* height: 100px; */
+        margin: 10px;
+        border: 1px solid #000;
+        display: inline-block;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        cursor: pointer;
+      }
+
+      .box img {
+        width: 100px;
+        object-fit: contain;
+        height: 100px;
+      }
+
+      .box.active {
+        /* border-color: green; */
+        border: 3px solid green;
+        /* You can customize the border styling as needed */
+      }
+
+      .character-container {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="enterID">
+      <img id="title" src="./index/PICKLE_Arcade_TitlePage.png" /> <br />
+      <input type="text" minlength="1" id="enterName" /> <br /><br />
+      <div class="character-container">
+        <div class="box" id="pickle">
+          Picklebutt
+          <img src="./index/picklebutt.png" />
+        </div>
+        <div class="box" id="spacebudz">
+          SpaceBudz
+          <img src="./index/spacebudz.png" />
+        </div>
+        <div class="box" id="jelly">
+          Jellycube
+          <img src="./index/jellycube.png" />
+        </div>
+        <div class="box" id="dexyyy">
+          Dexyyy
+          <img src="./index/dexyyy.png" />
+        </div>
+      </div>
+      <button id="jump"><img src="./index/pickle-jump-btn.png" /></button>
+      <button id="zoom"><img src="./index/pickle-zoom-btn.png" /></button>
+      <button id="land"><img src="./index/pickle-land-btn.png" /></button>
+      <buttom id="frogger"><img src="./index/pickle-jump-btn.png" /></buttom>
+      <br /><br />
+    </div>
+
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyAEUlVvqRpBgQZE0MES9s1UWW2FNsdiIWo",
+        authDomain: "picklebutt-arcade.firebaseapp.com",
+        projectId: "picklebutt-arcade",
+        storageBucket: "picklebutt-arcade.appspot.com",
+        messagingSenderId: "796801287786",
+        appId: "1:796801287786:web:493f3203017be7cbb96c13",
+      };
+
+      const app = initializeApp(firebaseConfig);
+
+      import {
+        getDatabase,
+        set,
+        get,
+        update,
+        remove,
+        ref,
+        child,
+      } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+      const db = getDatabase();
+
+      var enterName = document.querySelector("#enterName");
+      var jumpBtn = document.querySelector("#jump");
+      var zoomBtn = document.querySelector("#zoom");
+      var landBtn = document.querySelector("#land");
+      var froggerBtn = document.querySelector("#frogger");
+      var characterName;
+      document.addEventListener("DOMContentLoaded", function () {
+        // Get all elements with the class "box"
+        var boxes = document.getElementsByClassName("box");
+
+        // Add click event listener to each box
+        for (var i = 0; i < boxes.length; i++) {
+          boxes[i].addEventListener("click", function () {
+            // Remove the "active" class from all boxes
+            for (var j = 0; j < boxes.length; j++) {
+              boxes[j].classList.remove("active");
+            }
+
+            // Add the "active" class to the clicked box
+            this.classList.add("active");
+            sessionStorage.setItem("character", this.id);
+            var characterNames = sessionStorage.getItem("character");
+            var selectedDivId = this.id;
+            characterName = characterNames;
+            console.log("Selected div id:", selectedDivId, characterName);
+            // You can now use the variable 'selectedDivId' for further processing
+          });
+        }
+      });
+      function InsertDataJump() {
+        if (enterName.value != "" && characterName != "") {
+          const dataRef = ref(db, "pickleJump/" + enterName.value);
+          get(dataRef)
+            .then((snapshot) => {
+              if (snapshot.exists()) {
+                const userData = snapshot.val();
+                console.log("User data:", userData);
+                sessionStorage.setItem("name", enterName.value);
+                window.location.href = `${characterName}-jump.html`;
+              } else {
+                console.log("User not found");
+                set(ref(db, "pickleJump/" + enterName.value), {
+                  Name: enterName.value,
+                  Score: 0,
+                })
+                  .then(() => {
+                    console.log("Data added successfully!");
+                    sessionStorage.setItem("name", enterName.value);
+                    window.location.href = `${characterName}-jump.html`;
+                  })
+                  .catch((error) => {
+                    alert(error);
+                  });
+              }
+            })
+            .catch((error) => {
+              console.error("Error fetching user data:", error);
+            });
+        } else {
+          alert("Please enter a handle!");
+        }
+      }
+
+      function InsertDataZoom() {
+        if (enterName.value != "" && characterName != "") {
+          const dataRef = ref(db, "pickleZoom/" + enterName.value);
+          get(dataRef)
+            .then((snapshot) => {
+              if (snapshot.exists()) {
+                const userData = snapshot.val();
+                console.log("User data:", userData);
+                sessionStorage.setItem("name", enterName.value);
+                window.location.href = `${characterName}-zoom.html`;
+              } else {
+                console.log("User not found");
+                set(ref(db, "pickleZoom/" + enterName.value), {
+                  Name: enterName.value,
+                  Score: 0,
+                })
+                  .then(() => {
+                    console.log("Data added successfully!");
+                    sessionStorage.setItem("name", enterName.value);
+                    window.location.href = `${characterName}-zoom.html`;
+                  })
+                  .catch((error) => {
+                    alert(error);
+                  });
+              }
+            })
+            .catch((error) => {
+              console.error("Error fetching user data:", error);
+            });
+        } else {
+          alert("Please enter a handle!");
+        }
+      }
+
+      function InsertDataLand() {
+        if (enterName.value != "" && characterName != "") {
+          const dataRef = ref(db, "pickleLand/" + enterName.value);
+          get(dataRef)
+            .then((snapshot) => {
+              if (snapshot.exists()) {
+                const userData = snapshot.val();
+                console.log("User data:", userData);
+                sessionStorage.setItem("name", enterName.value);
+                window.location.href = `${characterName}-land.html`;
+              } else {
+                console.log("User not found");
+                set(ref(db, "pickleLand/" + enterName.value), {
+                  Name: enterName.value,
+                  Score: 0,
+                })
+                  .then(() => {
+                    console.log("Data added successfully!");
+                    sessionStorage.setItem("name", enterName.value);
+                    window.location.href = `${characterName}-land.html`;
+                  })
+                  .catch((error) => {
+                    alert(error);
+                  });
+              }
+            })
+            .catch((error) => {
+              console.error("Error fetching user data:", error);
+            });
+        } else {
+          alert("Please enter a handle!");
+        }
+      }
+      function InsertDataFrogger() {
+        if (enterName.value != "" && characterName != "") {
+          const dataRef = ref(db, "pickleFrogger/" + enterName.value);
+          get(dataRef)
+          
+            .then((snapshot) => {
+              if (snapshot.exists()) {
+                const userData = snapshot.val();
+                console.log("User data:", userData);
+                sessionStorage.setItem("name", enterName.value);
+                window.location.href = "picklebutt-frogger.html";
+              } else {
+                console.log("User not found");
+                set(ref(db, "pickleFrogger/" + enterName.value), {
+                  Name: enterName.value,
+                  Score: 0,
+                })
+                  .then(() => {
+                    console.log("Data added successfully!");
+                    sessionStorage.setItem("name", enterName.value);
+                    window.location.href = "picklebutt-frogger.html";
+                  })
+                  .catch((error) => {
+                    alert(error);
+                  });
+              }
+            })
+            .catch((error) => {
+              console.error("Error fetching user data:", error);
+            });
+        } else {
+          alert("Please enter a handle!");
+        }
+      }
+
+      jumpBtn.addEventListener("click", InsertDataJump);
+      zoomBtn.addEventListener("click", InsertDataZoom);
+      landBtn.addEventListener("click", InsertDataLand);
+      froggerBtn.addEventListener("click", InsertDataFrogger);
+    </script>
+  </body>
+</html>

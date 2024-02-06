@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Spacebudz Jump</title>
+    <meta charset="UTF-8" />
+    <style>
+      html,
+      body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+      }
+
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      canvas {
+        border: 1px solid black;
+        background-color: black;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="topScoresContainer"></div>
+    <canvas id="game"></canvas>
+    <script type="module">
+      var name = sessionStorage.getItem("name");
+
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyAEUlVvqRpBgQZE0MES9s1UWW2FNsdiIWo",
+        authDomain: "picklebutt-arcade.firebaseapp.com",
+        projectId: "picklebutt-arcade",
+        storageBucket: "picklebutt-arcade.appspot.com",
+        messagingSenderId: "796801287786",
+        appId: "1:796801287786:web:493f3203017be7cbb96c13",
+      };
+
+      const app = initializeApp(firebaseConfig);
+
+      import {
+        getDatabase,
+        set,
+        get,
+        update,
+        remove,
+        ref,
+        child,
+        query,
+        orderByChild,
+        orderByValue,
+        orderByKey,
+        limitToFirst,
+        onValue,
+      } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+      const db = getDatabase();
+
+      const canvas = document.getElementById("game");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      const context = canvas.getContext("2d");
+
+      // width and height of each platform and where platforms start
+      const platformWidth = 65;
+      const platformHeight = 20;
+      const platformStart = canvas.height - 50;
+
+      // player physics
+      const gravity = 0.25;
+      const drag = 0.3;
+      const bounceVelocity = -14;
+
+      // minimum and maximum vertical space between each platform
+      let minPlatformSpace = 10;
+      let maxPlatformSpace = 1;
+
+      // score, pause, gameOver
+      let score = 0;
+      let lastScore = 0;
+      let paused = true;
+      let gameOver = false;
+      let splashDown = false;
+
+      // landing messages
+      const landMessages = ["You fell....Don\'t tell @Donin001"];
+      const landMessage = ["Press ENTER or SPACE to return to start"];
+      const startMessage = ["Ready? Press ENTER or SPACE to start!"];
+
+      // information about each platform. the first platform starts in the
+      // bottom middle of the screen
+      let platforms = [
+        {
+          x: canvas.width / 2 - platformWidth / 2,
+          y: platformStart,
+        },
+      ];
+
+      // get a random number between the min (inclusive) and max (exclusive)
+      function random(min, max) {
+        return Math.random() * (max - min) + min;
+      }
+
+      // fill the initial screen with platforms
+      let y = platformStart;
+      while (y > 0) {
+        // the next platform can be placed above the previous one with a space
+        // somewhere between the min and max space
+        y -= platformHeight + random(minPlatformSpace, maxPlatformSpace);
+
+        // a platform can be placed anywhere 25px from the left edge of the canvas
+        // and 25px from the right edge of the canvas (taking into account platform
+        // width).
+        // however the first few platforms cannot be placed in the center so
+        // that the player will bounce up and down without going up the screen
+        // until they are ready to move
+        let x;
+        do {
+          x = random(25, canvas.width - 25 - platformWidth);
+        } while (
+          y > canvas.height / 2 &&
+          x > canvas.width / 2 - platformWidth * 1.5 &&
+          x < canvas.width / 2 + platformWidth / 2
+        );
+
+        platforms.push({ x, y });
+      }
+
+      // the doodle jumper
+      const doodle = {
+        width: 57,
+        height: 72,
+        x: canvas.width / 2 - 20,
+        y: platformStart - 100,
+
+        // velocity
+        dx: 0,
+        dy: 0,
+      };
+
+      // keep track of player direction and actions
+      let playerDir = 0;
+      let keydown = false;
+      let prevDoodleY = doodle.y;
+
+      // game loop
+      function loop() {
+        if (paused) return; // <--- stop looping
+        requestAnimationFrame(loop);
+        context.clearRect(0, 0, canvas.width, canvas.height);
+    // draw clouds
+    const cloud1 = new Image();
+  cloud1.src = "picklebutt-jump/assets/stars_01.png";
+  context.drawImage(cloud1, (canvas.width / 6), canvas.height / 20, cloud1.width, cloud1.height);
+
+  const cloud2 = new Image();
+  cloud2.src = "picklebutt-jump/assets/stars_02.png";
+  context.drawImage(cloud2, canvas.width / 4, canvas.height / 15, cloud2.width, cloud2.height);
+
+  const cloud3 = new Image();
+  cloud3.src = "picklebutt-jump/assets/stars_13.png";
+  context.drawImage(cloud3, canvas.width / 1.8, canvas.height / 20, cloud3.width, cloud3.height);
+
+  const cloud4 = new Image();
+  cloud4.src = "picklebutt-jump/assets/stars_17.png";
+  context.drawImage(cloud4, canvas.width - (canvas.width / 3.3), canvas.height / 25, cloud4.width, cloud4.height);
+
+  const cloud5 = new Image();
+  cloud5.src = "picklebutt-jump/assets/stars_04.png";
+  context.drawImage(cloud5, canvas.width / 20, canvas.height / 10, cloud5.width, cloud5.height);
+
+  const cloud6 = new Image();
+  cloud6.src = "picklebutt-jump/assets/stars_10.png";
+  context.drawImage(cloud6, canvas.width - (canvas.width / 10), canvas.height / 35, cloud6.width, cloud6.height);
+
+  const cloud7 = new Image();
+  cloud7.src = "picklebutt-jump/assets/stars_16.png";
+  context.drawImage(cloud7, canvas.width / 2.5, canvas.height / 19, cloud7.width, cloud7.height);
+
+  const cloud8 = new Image();
+  cloud8.src = "picklebutt-jump/assets/stars_18.png";
+  context.drawImage(cloud8, canvas.width / 1.5, canvas.width - (canvas.width / 5), cloud8.width, cloud8.height);
+
+  const cloud9 = new Image();
+  cloud9.src = "picklebutt-jump/assets/stars_09.png";
+  context.drawImage(cloud9, canvas.width / 4, canvas.width - (canvas.width / 3), cloud9.width, cloud9.height);
+
+  context.fillStyle = "white";
+  context.font = "33px barlow"
+  context.textAlign = "center";
+  context.fillText(`Score: ${score / 10}`, 120, 50);
+
+
+        // apply gravity to doodle
+        doodle.dy += gravity;
+
+        // if doodle reaches the middle of the screen, move the platforms down
+        // instead of doodle up to make it look like doodle is going up
+        if (doodle.y < canvas.height / 2 && doodle.dy < 0) {
+          platforms.forEach(function (platform) {
+            platform.y += -doodle.dy;
+            score += 1;
+          });
+
+          // add more platforms to the top of the screen as doodle moves up
+          while (platforms[platforms.length - 1].y > 0) {
+            platforms.push({
+              x: random(25, canvas.width - 25 - platformWidth),
+              y:
+                platforms[platforms.length - 1].y -
+                (platformHeight + random(minPlatformSpace, maxPlatformSpace)),
+            });
+
+            // add a bit to the min/max platform space as the player goes up
+            minPlatformSpace += 0.25;
+            maxPlatformSpace += 0.25;
+
+            // cap max space
+            maxPlatformSpace = Math.min(maxPlatformSpace, canvas.height / 2);
+          }
+        } else {
+          doodle.y += doodle.dy;
+        }
+
+        // only apply drag to horizontal movement if key is not pressed
+        if (!keydown) {
+          if (playerDir < 0) {
+            doodle.dx += drag;
+
+            // don't let dx go above 0
+            if (doodle.dx > 0) {
+              doodle.dx = 0;
+              playerDir = 0;
+            }
+          } else if (playerDir > 0) {
+            doodle.dx -= drag;
+
+            if (doodle.dx < 0) {
+              doodle.dx = 0;
+              playerDir = 0;
+            }
+          }
+        }
+
+        doodle.x += doodle.dx;
+
+        // make doodle wrap the screen
+        if (doodle.x + doodle.width < 0) {
+          doodle.x = canvas.width;
+        } else if (doodle.x > canvas.width) {
+          doodle.x = -doodle.width;
+        }
+
+        // draw platforms
+        context.fillStyle = "hotpink";
+        platforms.forEach(function (platform) {
+          context.fillRect(
+            platform.x,
+            platform.y,
+            platformWidth,
+            platformHeight
+          );
+
+          // make doodle jump if it collides with a platform from above
+          if (
+            // doodle is falling
+            doodle.dy > 0 &&
+            // doodle was previous above the platform
+            prevDoodleY + doodle.height <= platform.y &&
+            // doodle collides with platform
+            // (Axis Aligned Bounding Box [AABB] collision check)
+            doodle.x < platform.x + platformWidth &&
+            doodle.x + doodle.width > platform.x &&
+            doodle.y < platform.y + platformHeight &&
+            doodle.y + doodle.height > platform.y
+          ) {
+            // reset doodle position so it's on top of the platform
+            doodle.y = platform.y - doodle.height;
+            doodle.dy = bounceVelocity;
+          }
+        });
+
+        // draw doodle
+        var img1 = new Image();
+        img1.src = "picklebutt-jump/assets/spacebudz-jump.png";
+        context.drawImage(
+          img1,
+          doodle.x,
+          doodle.y,
+          doodle.width,
+          doodle.height
+        );
+
+        prevDoodleY = doodle.y;
+
+        // remove any platforms that have gone offscreen
+        platforms = platforms.filter(function (platform) {
+          return platform.y < canvas.height;
+        });
+
+        if (prevDoodleY > canvas.height) {
+          paused = true;
+          gameOver = true;
+          handleGameOver();
+          return;
+        }
+      }
+
+      function handleGameOver() {
+        lastScore = score;
+        context.fillStyle = "white";
+        context.font = "33px barlow";
+        context.textAlign = "center";
+        context.fillText(
+          `Score: ${lastScore / 10}`,
+          canvas.width / 2,
+          canvas.height / 2 - 200
+        );
+        context.fillStyle = "white";
+        context.font = "33px barlow";
+        context.textAlign = "center";
+        context.fillText(
+          `${landMessages}`,
+          canvas.width / 2,
+          canvas.height / 2 - 150
+        );
+        context.fillText(
+          `${landMessage}`,
+          canvas.width / 2,
+          canvas.height / 2 - 100
+        );
+        const dataRef = ref(db, "pickleJump/" + name);
+        get(dataRef)
+          .then((snapshot) => {
+            if (snapshot.exists()) {
+              const userData = snapshot.val();
+              console.log("User data:", userData);
+              updateScoress(userData);
+            } else {
+              console.log("User not found");
+            }
+          })
+          .catch((error) => {
+            console.error("Error fetching user data:", error);
+          });
+        const updateScoress = async (userData) => {
+          if (score / 10 > userData.Score) {
+            console.log(userData.Score, score / 10);
+            await update(ref(db, "pickleJump/" + name), {
+              Name: name,
+              Score: score / 10,
+            })
+              .then(() => {
+                console.log("Data updated successfully!");
+                fetchDataAndDraw()
+              })
+              .catch((error) => {
+                alert(error);
+              });
+          }else{
+            fetchDataAndDraw()
+          }
+        };
+
+        function drawOnCanvas(top10Scores) {
+          context.fillStyle = "white";
+          context.font = "24px barlow";
+          context.textAlign = "left";
+
+          for (let i = 0; i < Math.min(top10Scores.length, 10); i++) {
+            context.fillText(
+              `${i + 1}. ${top10Scores[i].Name}`,
+              canvas.width / 2 - 250,
+              canvas.height / 2 - 50 + i * 25
+            );
+            context.fillText(
+              `${top10Scores[i].Score}`,
+              canvas.width / 2 + 250,
+              canvas.height / 2 - 50 + i * 25
+            );
+          }
+        }
+        async function fetchDataAndDraw() {
+          const dataRef = ref(db, "pickleJump/");
+          let top10Scores;
+
+          const snapshot = await get(dataRef);
+          const data = snapshot.val();
+
+          if (data && typeof data === "object") {
+            const dataArrayAsArray = Object.values(data);
+            dataArrayAsArray.sort((a, b) => b.Score - a.Score);
+            top10Scores = dataArrayAsArray.slice(0, 10);
+            drawOnCanvas(top10Scores);
+          } else {
+            console.error("Data is not in the expected format");
+          }
+        }
+
+        // fetchDataAndDraw();
+      }
+
+      // listen to keyboard events to move doodle
+      document.addEventListener("keydown", function (e) {
+        // left arrow key
+        if (e.which === 37) {
+          keydown = true;
+          playerDir = -1;
+          doodle.dx = -3.3;
+        }
+        // right arrow key
+        else if (e.which === 39) {
+          keydown = true;
+          playerDir = 1;
+          doodle.dx = 3.3;
+        } else if (e.which === 32 && paused) {
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          paused = false;
+          requestAnimationFrame(loop);
+        } else if (e.which === 13 && paused) {
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          paused = false;
+          requestAnimationFrame(loop);
+        }
+      });
+
+      document.addEventListener("keyup", function (e) {
+        keydown = false;
+      });
+
+      document.append;
+
+      // start the game
+      if (!paused) {
+        requestAnimationFrame(loop);
+      } else {
+        context.fillStyle = "white";
+        context.font = "33px barlow";
+        context.textAlign = "center";
+        context.fillText(
+          `${startMessage}`,
+          canvas.width / 2,
+          canvas.height / 2 + 100
+        );
+
+        // listen to keyboard events to move doodle
+        document.addEventListener("keydown", function (e) {
+          if (e.which === 32 && gameOver) {
+            location.reload();
+          } else if (e.which === 13 && gameOver) {
+            location.reload();
+          }
+        });
+      }
+    </script>
+  </body>
+</html>

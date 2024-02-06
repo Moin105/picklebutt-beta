@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Dexyyy Zoom</title>
+  <meta charset="UTF-8">
+  <style>
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      border: 1px solid black;
+      background-color: #404649;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="topScoresContainer"></div>
+  <canvas id="game"></canvas>
+  <script type="module">
+    var name = sessionStorage.getItem('name');
+
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAEUlVvqRpBgQZE0MES9s1UWW2FNsdiIWo",
+      authDomain: "picklebutt-arcade.firebaseapp.com",
+      projectId: "picklebutt-arcade",
+      storageBucket: "picklebutt-arcade.appspot.com",
+      messagingSenderId: "796801287786",
+      appId: "1:796801287786:web:493f3203017be7cbb96c13"
+    };
+
+    const app = initializeApp(firebaseConfig);
+
+    import { getDatabase, set, get, update, remove, ref, child, query, orderByChild, orderByValue, orderByKey, limitToFirst, onValue }
+      from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"
+
+    const db = getDatabase();
+
+    const canvas = document.getElementById('game');
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+    const context = canvas.getContext('2d');
+
+    const minTunnelWidth = canvas.width / 2;
+    const maxTunnelWidth = canvas.width;
+    const minHeight = 100;
+    const maxHeight = 150;
+
+    const obstacleWidth = 65;
+    const obstacleHeight = 135;
+
+    // score, pause, gameOver
+    let score = 0;
+    let lastScore = 0;
+    let paused = false;
+    let gameOver = false;
+    let splashDown = false;
+
+    // landing messages
+    const landMessages = [
+    'Dexyyy crashed....Don\'t tell melon',
+    ];
+    const landMessage = [
+      'Press ENTER to return to start',
+    ];
+    const startMessage = [
+      'Ready? Press SPACE to start!',
+    ];
+
+    // how fast the background moves
+    const moveSpeed = 7;
+
+    // downward acceleration
+    const gravity = 0.35;
+
+    // keep track of the spacebar being pressed so we can move the
+    // helicopter up when pressed and down when not pressed
+    let spacePressed = false;
+
+    // clamp a number between min and max values
+    function clamp(num, min, max) {
+      return Math.min(Math.max(min, num), max);
+    }
+
+    // return a random integer between min (inclusive) and max (inclusive)
+    // @see https://stackoverflow.com/a/1527820/2124254 
+    function randInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    const helicopter = {
+      x: canvas.width / 6,
+      y: 100,
+      width: 72.7273,
+      height: 105.4545,
+      dy: 0,  // velocity
+      ddy: 0  // acceleration
+    };
+
+    // just keep track of a tunnel wall current x position, width, start
+    // and end height. the top and bottom wall are mirrored, so we only
+    // need to keep track of one of them
+    let tunnels = [{
+      x: 0,
+      width: canvas.width,
+      start: 50,
+      end: 50
+    },
+    {
+      x: canvas.width,
+      width: randInt(minTunnelWidth, maxTunnelWidth),
+      start: 50,
+      end: randInt(minHeight, maxHeight)
+    }];
+    
+    // for the obstacles in the path just need to keep track of the
+    // position as they are always the same size
+    let obstacles = [{
+      x: canvas.width,
+      y: canvas.height / 2
+    },
+    {
+      x: canvas.width * 2,
+      y: canvas.height / 2
+    }];
+
+    // tunnel wall color and rgb value
+    const wallColor = 'green';
+    context.fillStyle = wallColor;
+    context.fillRect(0, 0, 1, 1);
+
+    // getImageData returns a data object which is a flat array of every
+    // pixel of the canvas in the specified rect (x, y, width, height).
+    // every 4 indices of the array is a single pixel's r,g,b,a values
+    const wallData = context.getImageData(0, 0, 1, 1);
+
+    // destructure the image data array to get the rgb values of the wall
+    // @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment
+    const [wallRed, wallGreen, wallBlue] = wallData.data;
+
+    // game loop
+    let rAF;
+    function loop() {
+      if (paused) return; // <--- stop looping
+      rAF = requestAnimationFrame(loop);
+      context.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (spacePressed) {
+        helicopter.ddy = -0.7;
+      }
+      else {
+        helicopter.ddy = 0;
+      }
+
+      // update position based on acceleration and velocity
+      helicopter.dy += helicopter.ddy + gravity;
+      // clamp velocity
+      helicopter.dy = clamp(helicopter.dy, -8, 8);
+      helicopter.y += helicopter.dy;
+
+      // // draw picklebutt
+      var img1 = new Image();
+      img1.src = "picklebutt-zoom/assets/dexyyy-zoom_02.png";
+
+      var img2 = new Image();
+      img2.src = "picklebutt-zoom/assets/dexyyy-zoom_01.png";
+
+      if (spacePressed) {
+        context.drawImage(img2, helicopter.x, helicopter.y, helicopter.width, helicopter.height)
+      }
+      else {
+        context.drawImage(img1, helicopter.x, helicopter.y, helicopter.width, helicopter.height)
+      }
+
+      // draw the tunnel walls over the helicopter
+      context.fillStyle = 'green';
+      tunnels.forEach((tunnel, index) => {
+        tunnel.x -= moveSpeed;
+
+        // if the last tunnel is fully on screen, we need to spawn a new
+        // tunnel segment off screen
+        if (
+          index === tunnels.length - 1 &&
+          tunnel.x + tunnel.width <= canvas.width
+        ) {
+          tunnels.push({
+            x: tunnel.x + tunnel.width,
+            width: randInt(minTunnelWidth, maxTunnelWidth),
+            start: tunnel.end,
+            end: randInt(minHeight, maxHeight)
+          });
+        }
+
+        // top tunnel wall
+        context.beginPath();
+        context.moveTo(tunnel.x, 0);
+        context.lineTo(tunnel.x, tunnel.start);
+        context.lineTo(tunnel.x + tunnel.width, tunnel.end);
+        context.lineTo(tunnel.x + tunnel.width, 0);
+        context.closePath();
+        context.fill();
+
+        // bottom tunnel wall
+        context.beginPath();
+        context.moveTo(tunnel.x, canvas.height);
+        context.lineTo(tunnel.x, tunnel.start + 450);
+        context.lineTo(tunnel.x + tunnel.width, tunnel.end + 450);
+        context.lineTo(tunnel.x + tunnel.width, canvas.height);
+        context.closePath();
+        context.fill();
+      });
+
+      // draw obstacles
+      obstacles.forEach((obstacle, index) => {
+        obstacle.x -= moveSpeed;
+        context.fillRect(obstacle.x, obstacle.y, obstacleWidth, obstacleHeight);
+
+        // if the last obstacle is fully on screen, we need to spawn a new
+        // one off screen
+        if (
+          index === obstacles.length - 1 &&
+          obstacle.x + obstacleWidth <= canvas.width / 2
+        ) {
+          obstacles.push({
+            x: canvas.width * 2,
+            y: randInt(maxHeight + 50, canvas.height - obstacleHeight - maxHeight - 50)
+          });
+        }
+      });
+
+      context.fillStyle = "white";
+      context.font = "33px barlow"
+      context.textAlign = "center";
+      context.fillText(`Score: ${score+1}`, 120, 100);
+
+      // remove any tunnel segments or obstacles that are off screen
+      tunnels = tunnels.filter(tunnel => tunnel.x + tunnel.width > 0);
+      score += 1;
+      obstacles = obstacles.filter(obstacle => obstacle.x + obstacleWidth > 0);
+
+      // pixel perfect collision detection
+      // get the pixels of the canvas at the helicopter rect and look for
+      // any pixels that match the wall color. the wall has to be drawn
+      // above the helicopter in order for this to work
+      const { data } = context.getImageData(helicopter.x, helicopter.y, helicopter.width, helicopter.height);
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+
+        // if we match the tunnel wall color we have a collision
+        if (r === wallRed && g === wallGreen && b === wallBlue) {
+          // draw a dotted red circle around the helicopter when it
+          // crashes
+          context.strokeStyle = 'red';
+          context.setLineDash([5, 15])
+          context.lineWidth = 4;
+
+          context.beginPath();
+          context.arc(helicopter.x + helicopter.width / 2, helicopter.y + helicopter.height / 2, helicopter.width / 1.25, 0, 2 * Math.PI);
+          context.stroke();
+
+          cancelAnimationFrame(rAF);
+          handleGameOver();
+          return;
+        }
+      }
+    }
+    // listen to keyboard events to move the helicopter
+    document.addEventListener('keydown', function (e) {
+      // spacebar
+      if (e.code === 'Space') {
+        spacePressed = true;
+      }
+    });
+    document.addEventListener('keyup', function (e) {
+      // spacebar
+      if (e.code === 'Space') {
+        spacePressed = false;
+      }
+    });
+
+    // start the game
+    if (!paused) {
+      rAF = requestAnimationFrame(loop);
+    }
+
+
+    function handleGameOver() {
+      gameOver = true;
+      paused = true;
+      context.fillStyle = "white";
+      context.font = "33px barlow";
+      context.textAlign = "center";
+      context.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 - 200);
+      context.fillStyle = "white";
+      context.font = "33px barlow";
+      context.textAlign = "center";
+      context.fillText(`${landMessages}`, canvas.width / 2, canvas.height / 2 - 150);
+      context.fillText(`${landMessage}`, canvas.width / 2, canvas.height / 2 - 100);
+
+      const dataRef = ref(db, "pickleZoom/" + name);
+      get(dataRef)
+        .then((snapshot) => {
+          if (snapshot.exists()) {
+            const userData = snapshot.val();
+            console.log("User data:", userData);
+            updateScoress(userData);
+          } else {
+            console.log("User not found");
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching user data:", error);
+        });
+      const updateScoress = async (userData) => {
+        if (score > userData.Score) {
+          console.log(userData.Score, score)
+          await update(ref(db, "pickleZoom/" + name), {
+            Name: name,
+            Score: score
+          })
+            .then(() => {
+              console.log("Data updated successfully!");
+              fetchDataAndDraw();
+            })
+            .catch((error) => {
+              alert(error);
+            });
+        } else {
+          fetchDataAndDraw();
+        }
+      }
+
+      function drawOnCanvas(top10Scores) {
+        context.fillStyle = "white";
+        context.font = "24px barlow";
+        context.textAlign = "left";
+
+
+        for (let i = 0; i < Math.min(top10Scores.length, 10); i++) {
+          context.fillText(`${i + 1}. ${top10Scores[i].Name}`, canvas.width / 2 - 250, canvas.height / 2 - 50 + i * 25);
+          context.fillText(`${top10Scores[i].Score}`, canvas.width / 2 + 250, canvas.height / 2 - 50 + i * 25);
+
+        }
+      }
+      async function fetchDataAndDraw() {
+        const dataRef = ref(db, 'pickleZoom/');
+        let top10Scores;
+
+
+        const snapshot = await get(dataRef);
+        const data = snapshot.val();
+
+
+        if (data && typeof data === 'object') {
+          const dataArrayAsArray = Object.values(data);
+          dataArrayAsArray.sort((a, b) => b.Score - a.Score);
+          top10Scores = dataArrayAsArray.slice(0, 10);
+
+
+          drawOnCanvas(top10Scores);
+        } else {
+          console.error("Data is not in the expected format");
+        }
+      }
+
+
+      document.addEventListener('keyup', function (e) {
+        // spacebar
+        if (e.code === 'Enter') {
+          paused = false;
+          gameOver = false;
+          location.reload();
+        }
+      });
+    }
+
+
+  </script>
+</body>
+
+</html>

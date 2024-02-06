@@ -1,0 +1,96 @@
+*{
+    box-sizing: border-box;
+    margin: 0;
+}
+
+.gameBoard{
+    display: grid;
+    width: 100vw;
+    height: 100vh;
+    border: 1px solid black;
+    margin: 0;
+    padding: 0;
+}
+.box{
+    /* border: 1px solid black; */
+    color: white;
+    text-align: center;
+}
+
+.water{
+    /* background-image: url('../index/water.jpeg'); */
+    background-color: #3535b6;
+}
+.land{
+    background-color: chartreuse;
+}
+.safe{
+    background-color: yellow;
+}
+.road{
+    background-color: #343434;
+}
+.car{
+    /* background-color: red; */
+    background-image: url('../index/car.png');
+    background-size: 100% ;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+.log{
+    /* background-color: burlywood; */
+    background-image: url('../index/logs.png');
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+
+}
+.frog-pickle{
+    /* background-color: green; */
+    background-size: 100% ;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-image: url('../index/picklebutt.png')
+}
+/* Add your own styles here */
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+  }
+  
+  .modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #fefefe;
+    padding: 23px 20px;
+    border: 1px solid #888;
+    display: flex;
+    flex-direction: column;
+    border-radius: 5px;
+    max-width: 80%;
+  }
+  
+  .close {
+    color: #aaa;
+    float: right;
+    align-self: flex-end;
+    position: absolute;
+    font-size: 28px;
+    font-weight: bold;
+    top:2px;
+    right: 5px;
+    cursor: pointer;
+  }
+  
+  .close:hover {
+    color: black;
+  }
+  
