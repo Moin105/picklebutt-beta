@@ -135,25 +135,19 @@ async function mover() {
           Name: handle,
           Score: score
         }
-      await  updateData(handle, data)
-      .then(() => {
-        // Handle success
-        console.log("moin")
-      })
-      .catch((error) => {
-        // Handle error
-        console.log("noe")
-      });
+      await  updateFrogger(handle, data)
+  
     openModal(`You win! ${score} points!`)  
     
     return 
   } else if (current.contains("car")) {
     console.log("you lose");
-    // game.inPlay = false
-    // stopGame();
-    // openModal('You got hit by a car!')
+    game.inPlay = false
+    stopGame();
+    openModal('You got hit by a car!')
   } else if (current.contains("water")) {
     if (current.contains("log")) {
+
     //   game.elements[game.active].classList.remove("frog-pickle");
       console.log("you safe");
       if (current.contains("left")) {
@@ -163,9 +157,8 @@ async function mover() {
         keyz.ArrowRight = true;
       }
     } else {
-    //   console.log("you fell in water");
-    //   stopGame();
-    //   openModal('You fell in the water!')
+      stopGame();
+      openModal('You fell in the water!')
       //    game.inPlay = false
     }
 
