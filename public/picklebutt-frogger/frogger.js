@@ -1,7 +1,4 @@
 var name = sessionStorage.getItem("name");
-
-// import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-
 const firebaseConfig = {
     apiKey: "AIzaSyAEUlVvqRpBgQZE0MES9s1UWW2FNsdiIWo",
     authDomain: "picklebutt-arcade.firebaseapp.com",
@@ -18,29 +15,8 @@ const update = window.update;
 const Top10 = window.fetchData;
 const updateFrogger = window.updateFrogger
 var handle = sessionStorage.getItem('name');
-// const fetchDataAndAssignTop10 = window.fetchDataAndAssignTop10;
-// const updateDatas = window.updateDatas;
-const updateData = window.updateData;
 const basePath = './picklebutt-frogger/';
-// const app = initializeApp(firebaseConfig);
 
-// import {
-//     getDatabase,
-//     set,
-//     get,
-//     update,
-//     remove,
-//     ref,
-//     child,
-//     query,
-//     orderByChild,
-//     orderByValue,
-//     orderByKey,
-//     limitToFirst,
-//     onValue,
-// } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-
-// const db = getDatabase();
 
 console.log("name", handle);
 const gameArea = document.querySelector(".gamearea");
@@ -49,7 +25,7 @@ const game = {
   y: 18,
   elements: [],
   active: 7,
-  speed: 40,
+  speed: 10,
   counter: 0,
   inPlay: true,
   logSize: 3,
@@ -62,6 +38,35 @@ const keyz = {
   ArrowDown: false,
 };
 const obs = [];
+function moveObstacles() {
+  obs.forEach((el) => {
+    let temp = el.pos;
+    if (el.dir == "left") {
+      el.pos--;
+      if (el.pos < el.row * game.x) {
+        el.pos += game.x;
+      }
+    } else {
+      el.pos++;
+      if (el.pos > (el.row + 1) * game.x - 1) {
+        el.pos -= game.x;
+      }
+    }
+    if (el.type == "log") {
+      for (let x = 0; x < game.logSize; x++) {
+        game.elements[temp + x].classList.remove(el.type);
+      }
+      for (let x = 0; x < game.logSize; x++) {
+        if (el.pos + x < (el.row + 1) * game.x) {
+          game.elements[el.pos + x].classList.add(el.type);
+        }
+      }
+    } else {
+      game.elements[temp].classList.remove(el.type);
+      game.elements[el.pos].classList.add(el.type);
+    }
+  });
+}
 // gameArea.addEventListener("click", (e) => {
 //   if (game.inPlay) {
 //     stopGame();
@@ -89,45 +94,45 @@ async function mover() {
     for (keyPress in keyz) {
       keyz[keyPress] = false;
     }
-
-    obs.forEach((el, index) => {
-      let temp = el.pos;
-      if (el.dir == "left") {
-        el.pos--;
-        if (el.pos < el.row * game.x) {
-          el.pos += game.x;
-        }
-      } else {
-        el.pos++;
-        if (el.pos > (el.row + 1) * game.x - 1) {
-          el.pos -= game.x;
-        }
-      }
-      if (el.type == "log") {
-        for (let x = 0; x < game.logSize; x++) {
-          game.elements[temp + x].classList.remove(el.type);
-        }
-        for (let x = 0; x < game.logSize; x++) {
-            // console.log('log', el.pos + x, (el.row + 1) * game.x, game.elements[el.pos + x].classList)
-          if (el.pos + x < (el.row + 1) * game.x) {
-            game.elements[el.pos + x].classList.add(el.type);
-          }
-        }
-      } else {
-        game.elements[temp].classList.remove(el.type);
-        game.elements[el.pos].classList.add(el.type);
-      }
-      // if (game.elements[game.active].classList.contains('safe')){
-      //     console.log('you win')
-      // }
-    });
+    moveObstacles()
+    // obs.forEach((el, index) => {
+    //   let temp = el.pos;
+    //   if (el.dir == "left") {
+    //     el.pos--;
+    //     if (el.pos < el.row * game.x) {
+    //       el.pos += game.x;
+    //     }
+    //   } else {
+    //     el.pos++;
+    //     if (el.pos > (el.row + 1) * game.x - 1) {
+    //       el.pos -= game.x;
+    //     }
+    //   }
+    //   if (el.type == "log") {
+    //     for (let x = 0; x < game.logSize; x++) {
+    //       game.elements[temp + x].classList.remove(el.type);
+    //     }
+    //     for (let x = 0; x < game.logSize; x++) {
+    //         // console.log('log', el.pos + x, (el.row + 1) * game.x, game.elements[el.pos + x].classList)
+    //       if (el.pos + x < (el.row + 1) * game.x) {
+    //         game.elements[el.pos + x].classList.add(el.type);
+    //       }
+    //     }
+    //   } else {
+    //     game.elements[temp].classList.remove(el.type);
+    //     game.elements[el.pos].classList.add(el.type);
+    //   }
+    //   // if (game.elements[game.active].classList.contains('safe')){
+    //   //     console.log('you win')
+    //   // }
+    // });
   }
   let current = game.elements[game.active].classList;
 
   if (current.contains("safe")) {
     // console.log("you win");
     
-    //   game.inPlay = false
+    //   game.inPlay = false  
     stopGame();
     game.totalScore += 100;
     score = game.totalScore;
@@ -140,11 +145,11 @@ async function mover() {
     openModal(`You win! ${score} points!`)  
     
     return 
-  } else if (current.contains("car")) {
+  } else if (current.contains("car") || current.contains("car2") ) {
     console.log("you lose");
-    game.inPlay = false
-    stopGame();
-    openModal('You got hit by a car!')
+    // game.inPlay = false
+    // stopGame();
+    // openModal('You got hit by a car!')
   } else if (current.contains("water")) {
     if (current.contains("log")) {
 
@@ -157,8 +162,8 @@ async function mover() {
         keyz.ArrowRight = true;
       }
     } else {
-      stopGame();
-      openModal('You fell in the water!')
+      // stopGame();
+      // openModal('You fell in the water!')
       //    game.inPlay = false
     }
 
@@ -197,25 +202,73 @@ function createMyElements(parent, elementType, html, classname) {
   element.classList.add(classname);
   return element;
 }
+// function createBoard() {
+//   const total = game.x * game.y;
+//   const safety = Math.floor(game.x * Math.random());
+//   let steps = 0;
+//   let tempClass = "land";
+//   let row = 0;
+//   let dir = "right";
+//   for (let i = 0; i < total; i++) {
+//     steps++;
+//     if (i % 4 == 0) {
+//       steps = Math.floor(Math.random() * 2);
+//     }
+//     let temp = createMyElements(game.board, "div", "", "box");
+//     if (i == safety) {
+//       temp.classList.add("safe");
+//     }
+//     if (i % game.x == 0) {
+//       row = i / game.x;
+//       console.log("moin", row);
+//       if (row > 0 && row < game.y / 2) {
+//         tempClass = "water";
+//       } else if (row > game.y / 2 && row < game.y - 1) {
+//         tempClass = "road";
+//       } else {
+//         tempClass = "land";
+//       }
+//       //   tempClass = tempClass == 'land' ? 'water' : 'land'
+//     }
+//     dir = row % 2 == 0 ? "left" : "right";
+//     temp.classList.add(tempClass);
+//     if (tempClass == "road" && steps == 0) {
+//       temp.classList.add("car");
+//       steps = 0;
+//       obs.push({ type: "car", pos: i, dir: dir, row: row });
+//     }
+//     if (tempClass == "water" && steps == 0) {
+//       temp.classList.add("log");
+//     //   steps = 0;
+//       obs.push({ type: "log", pos: i, dir: dir, row: row });
+//     }
+//     temp.classList.add(dir);
+//     game.elements.push(temp);
+//   }
+//   game.board.style.setProperty(
+//     "grid-template-columns",
+//     "repeat(" + game.x + ", 1fr)"
+//   );
+// }
 function createBoard() {
   const total = game.x * game.y;
   const safety = Math.floor(game.x * Math.random());
-  let steps = 0;
   let tempClass = "land";
   let row = 0;
   let dir = "right";
+  
   for (let i = 0; i < total; i++) {
-    steps++;
-    if (i % 4 == 0) {
-      steps = Math.floor(Math.random() * 2);
-    }
     let temp = createMyElements(game.board, "div", "", "box");
+    
+    // Set the safety class
     if (i == safety) {
       temp.classList.add("safe");
     }
+    
+    // Determine the class for each cell based on the row
     if (i % game.x == 0) {
-      row = i / game.x;
-      console.log("moin", row);
+      row = Math.floor(i / game.x);
+      
       if (row > 0 && row < game.y / 2) {
         tempClass = "water";
       } else if (row > game.y / 2 && row < game.y - 1) {
@@ -223,28 +276,43 @@ function createBoard() {
       } else {
         tempClass = "land";
       }
-      //   tempClass = tempClass == 'land' ? 'water' : 'land'
     }
-    dir = row % 2 == 0 ? "left" : "right";
+    
     temp.classList.add(tempClass);
-    if (tempClass == "road" && steps == 0) {
-      temp.classList.add("car");
-      steps = 0;
-      obs.push({ type: "car", pos: i, dir: dir, row: row });
-    }
-    if (tempClass == "water" && steps == 0) {
+    if (tempClass == "road" && Math.random() < 0.1) {
+      // // Add car
+      // temp.classList.add("car");
+      // obs.push({ type: "car", pos: i, dir: dir, row: row });
+      let carClass = dir === "left" ? "car2" : "car";
+
+      // Add the determined class
+      temp.classList.add(carClass);
+    
+      // Push the object to the array
+      obs.push({ type: carClass, pos: i, dir: dir, row: row });
+    } else if (tempClass == "water" && Math.random() < 0.2) {
+      // Add log
       temp.classList.add("log");
-    //   steps = 0;
       obs.push({ type: "log", pos: i, dir: dir, row: row });
     }
+    
+    // Update direction for the next row
+    dir = row % 2 == 0 ? "left" : "right";
+    
+    // Add direction class to the cell
     temp.classList.add(dir);
+    
+    // Add the cell to the elements array
     game.elements.push(temp);
   }
+  
+  // Set the grid template columns
   game.board.style.setProperty(
     "grid-template-columns",
     "repeat(" + game.x + ", 1fr)"
   );
 }
+
 // function stopGame() {
 //   game.inPlay = false;
   

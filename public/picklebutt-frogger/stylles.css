@@ -94,3 +94,34 @@
     color: black;
   }
   
+
+    /* Add smooth animation for logs and cars */
+    @keyframes moveLeft {
+        from { transform: translateX(0); }
+        to { transform: translateX(-100%); }
+      }
+    
+      @keyframes moveRight {
+        from { transform: translateX(0); }
+        to { transform: translateX(100%); }
+      }
+    
+      .log, .car {
+        animation-duration: 10ms; /* Adjust the duration as needed */
+        animation-iteration-count: infinite;
+      }
+    
+      .log.move-left {
+        animation-name: moveLeft;
+      }
+    
+      .car.move-right {
+        animation-name: moveRight;
+      }
+      .car2{
+        background-image: url('../index/car.png');
+        background-size: 100%;
+        background-position: center;
+        background-repeat: no-repeat;
+        transform: rotate(180deg); 
+      }
